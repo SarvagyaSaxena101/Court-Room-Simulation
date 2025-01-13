@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR Courtroom Simulation</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #f0f0f0;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/examples/js/libs/stats.min.js"></script>
+    <script>
+        // Initialize the scene, camera, and renderer
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // Orbit Controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enablePan = false;
+        controls.minAzimuthAngle = -Math.PI / 6; // Limit left rotation
+        controls.maxAzimuthAngle = Math.PI / 6; // Limit right rotation
+        controls.maxPolarAngle = Math.PI / 2; // Limit upward rotation
+        controls.minPolarAngle = Math.PI / 3; // Limit downward rotation
+
+        // Add lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        directionalLight.position.set(10, 20, 10);
+        scene.add(directionalLight);
+
+        // Floor
+        const floorGeometry = new THREE.PlaneGeometry(20, 20);
+        const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+        floor.rotation.x = -Math.PI / 2;
+        scene.add(floor);
+
+        // Judge's Bench with Enhanced Details
+        const benchGeometry = new THREE.BoxGeometry(3, 1.5, 1);
+        const benchMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+        const judgeBench = new THREE.Mesh(benchGeometry, benchMaterial);
+        judgeBench.position.set(0, 0.75, -3);
+
+        // Adding drawers to the bench
+        const drawerGeometry = new THREE.BoxGeometry(0.8, 0.4, 0.2);
+        const drawerMaterial = new THREE.MeshStandardMaterial({ color: 0x654321 });
+        const handleGeometry = new THREE.CylinderGeometry(0.05, 0.05, 0.1, 32);
+        const handleMaterial = new THREE.MeshStandardMaterial({ color: 0xD4AF37 });
+
+        const createDrawer = (x, y, z) => {
+            const drawer = new THREE.Mesh(drawerGeometry, drawerMaterial);
+            drawer.position.set(x, y, z);
+            judgeBench.add(drawer);
+
+            const handle = new THREE.Mesh(handleGeometry, handleMaterial);
+            handle.rotation.z = Math.PI / 2;
+            handle.position.set(x, y, z + 0.15);
+            judgeBench.add(handle);
+        };
+
+        createDrawer(-0.5, 0.1, 0.6);
+        createDrawer(0.5, 0.1, 0.6);
+
+        // Adding bevel to the edges
+        const bevelGeometry = new THREE.BoxGeometry(3.1, 0.1, 1.1);
+        const bevelMaterial = new THREE.MeshStandardMaterial({ color: 0x7B4513 });
+        const bevel = new THREE.Mesh(bevelGeometry, bevelMaterial);
+        bevel.position.set(0, 1.25, -3);
+        judgeBench.add(bevel);
+
+        scene.add(judgeBench);
+
+        // Defendant's and Attacker's Benches with similar enhancements
+        const createBench = (x, z) => {
+            const bench = new THREE.Mesh(benchGeometry, benchMaterial);
+            bench.position.set(x, 0.75, z);
+
+            // Adding similar details as judge's bench
+            createDrawer(x - 0.5, 0.1, z + 0.6);
+            createDrawer(x + 0.5, 0.1, z + 0.6);
+            const benchBevel = new THREE.Mesh(bevelGeometry, bevelMaterial);
+            benchBevel.position.set(x, 1.25, z);
+            scene.add(benchBevel);
+
+            scene.add(bench);
+        };
+
+        createBench(-4, 0);
+        createBench(4, 0);
+
+        // Columns and Walls
+        const columnGeometry = new THREE.BoxGeometry(0.5, 5, 0.5);
+        const columnMaterial = new THREE.MeshStandardMaterial({ color: 0xD2B48C });
+
+        for (let i = -3; i <= 3; i += 2) {
+            const column = new THREE.Mesh(columnGeometry, columnMaterial);
+            column.position.set(i * 2.5, 2.5, -5);
+            scene.add(column);
+        }
+
+        // Lighting
+        const lightTexture = new THREE.TextureLoader().load('https://i.imgur.com/VPw1Y.jpg'); // Adjust path as necessary
+        const lightGeometry = new THREE.PlaneGeometry(1.5, 1.5);
+        const lightMaterial = new THREE.MeshBasicMaterial({ map: lightTexture, transparent: true });
+
+        const lightPositions = [
+            { x: -5, y: 5, z: -4 },
+            { x: 0, y: 5, z: -4 },
+            { x: 5, y: 5, z: -4 }
+        ];
+
+        lightPositions.forEach(pos => {
+            const lightMesh = new THREE.Mesh(lightGeometry, lightMaterial);
+            lightMesh.position.set(pos.x, pos.y, pos.z);
+            scene.add(lightMesh);
+        });
+
+        // Walls with Peach Color
+        const wallGeometry = new THREE.PlaneGeometry(20, 10);
+        const wallMaterial = new THREE.MeshStandardMaterial({ color: 0xFFDAB9 });
+
+        const backWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        backWall.position.set(0, 5, -7);
+        scene.add(backWall);
+
+        const leftWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        leftWall.rotation.y = Math.PI / 2;
+        leftWall.position.set(-10, 5, 0);
+        scene.add(leftWall);
+
+        const rightWall = new THREE.Mesh(wallGeometry, wallMaterial);
+        rightWall.rotation.y = -Math.PI / 2;
+        rightWall.position.set(10, 5, 0);
+        scene.add(rightWall);
+
+        // Flags
+        const flagGeometry = new THREE.ConeGeometry(0.2, 2, 32);
+        const flagMaterial = new THREE.MeshStandardMaterial({ color: 0xFF0000 });
+
+        const leftFlag = new THREE.Mesh(flagGeometry, flagMaterial);
+        leftFlag.position.set(-1.5, 1, -4);
+        scene.add(leftFlag);
+
+        const rightFlag = new THREE.Mesh(flagGeometry, flagMaterial);
+        rightFlag.position.set(1.5, 1, -4);
+        scene.add(rightFlag);
+
+        // Lamps on Desks
+        const lampGeometry = new THREE.CylinderGeometry(0.1, 0.1, 0.5, 32);
+        const lampMaterial = new THREE.MeshStandardMaterial({ color: 0x00FF00 });
+
+        const leftLamp = new THREE.Mesh(lampGeometry, lampMaterial);
+        leftLamp.position.set(-4, 1.25, 1);
+        scene.add(leftLamp);
+
+        const rightLamp = new THREE.Mesh(lampGeometry, lampMaterial);
+        rightLamp.position.set(4, 1.25, 1);
+        scene.add(rightLamp);
+
+        // Define shared materials
+        const handMaterial = new THREE.MeshStandardMaterial({ color: 0xF5CBA7 }); // Skin color
+        const faceMaterial = new THREE.MeshStandardMaterial({ color: 0xFFDAB9 }); // Peach color for face
+        const hairMaterial = new THREE.MeshStandardMaterial({ color: 0x4A2D1F }); // Dark brown hair
+
+        // Hair Geometry for Strand-like Effect
+        const strandGeometry = new THREE.CylinderGeometry(0.1, 0.1, 1, 32);
+
+        // Function to create a human figure with a smiley face
+        const createHuman = (x, z, isJudge = false) => {
+            const bodyGeometry = new THREE.CylinderGeometry(0.5, 0.5, 2, 32);
+            const bodyMaterial = new THREE.MeshStandardMaterial({ color: 0x4B0082 });
+            const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            body.position.set(x, 1, z);
+            scene.add(body);
+
+            const headGeometry = new THREE.SphereGeometry(0.5, 32, 32);
+            const head = new THREE.Mesh(headGeometry, faceMaterial);
+            head.position.set(x, 2.25, z);
+            scene.add(head);
+
+            // Hands with realistic skin tone
+            const handGeometry = new THREE.SphereGeometry(0.3, 32, 32);
+
+            const leftHand = new THREE.Mesh(handGeometry, handMaterial);
+            leftHand.position.set(x - 0.75, 1, z);
+            scene.add(leftHand);
+
+            const rightHand = new THREE.Mesh(handGeometry, handMaterial);
+            rightHand.position.set(x + 0.75, 1, z);
+            scene.add(rightHand);
+
+            // Adding hair strands
+            for (let i = 0; i < 10; i++) {
+                const strand = new THREE.Mesh(strandGeometry, hairMaterial);
+                strand.rotation.z = Math.random() * Math.PI;
+                strand.position.set(x + (Math.random() - 0.5) * 0.5, 2.7, z + (Math.random() - 0.5) * 0.5);
+                scene.add(strand);
+            }
+
+            // Only add eyes for the judge
+            if (isJudge) {
+                const eyeGeometry = new THREE.PlaneGeometry(0.4, 0.2); // Wider eyes
+                const eyeMaterial = new THREE.MeshStandardMaterial({ color: 0x000000, side: THREE.DoubleSide });
+
+                // Create multiple pairs of eyes for visibility from different angles
+                const positions = [
+                    { x: -0.3, y: 2.25, z: 0.48 },
+                    { x: 0.3, y: 2.25, z: 0.48 },
+                    { x: -0.3, y: 2.25, z: -0.48 },
+                    { x: 0.3, y: 2.25, z: -0.48 },
+                    { x: -0.48, y: 2.25, z: 0.3 },
+                    { x: 0.48, y: 2.25, z: 0.3 },
+                    { x: -0.48, y: 2.25, z: -0.3 },
+                    { x: 0.48, y: 2.25, z: -0.3 },
+                ];
+
+                positions.forEach(pos => {
+                    const eye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+                    eye.position.set(x + pos.x, pos.y, z + pos.z);
+                    eye.rotation.y = Math.atan2(pos.z, pos.x);
+                    scene.add(eye);
+                });
+            }
+        };
+
+        // Create Judge (with visible eyes)
+        createHuman(0, -3, true);
+
+        // Create Defendant and Attacker (without eyes)
+        createHuman(-4, 0);
+        createHuman(4, 0);
+
+        // Position the camera
+        camera.position.set(0, 2, 5);
+        controls.target.set(0, 2, 0);
+        controls.update();
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
